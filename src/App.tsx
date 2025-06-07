@@ -1,18 +1,32 @@
-import { useState } from 'react'
-import { ThemeProvider, CssBaseline, Container, Box, Typography, Button, Paper, Select, MenuItem, FormControl, InputLabel, CircularProgress, useMediaQuery } from '@mui/material'
-import { createTheme } from '@mui/material/styles'
-import Editor, { loader } from '@monaco-editor/react'
-import ReactMarkdown from 'react-markdown'
-import type { ReviewResponse } from './types'
-import type { SelectChangeEvent } from '@mui/material/Select'
-import { reviewCode } from './api'
-import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import { useState } from "react";
+import {
+  ThemeProvider,
+  CssBaseline,
+  Container,
+  Box,
+  Typography,
+  Button,
+  Paper,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  CircularProgress,
+  useMediaQuery,
+} from "@mui/material";
+import { createTheme } from "@mui/material/styles";
+import Editor, { loader } from "@monaco-editor/react";
+import type { ReviewResponse } from "./types";
+import type { SelectChangeEvent } from "@mui/material/Select";
+import { reviewCode } from "./api";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import { titleCase } from "./utils/utility";
 
 const darkTheme = createTheme({
   palette: {
-    mode: 'dark',
+    mode: "dark",
   },
-})
+});
 
 const languagePatterns = {
   java: {
@@ -20,16 +34,16 @@ const languagePatterns = {
       /\bclass\s+\w+\s*\{/,
       /\bpublic\s+(?:class|interface|enum)\s+\w+/,
       /\bimport\s+java\./,
-      /\bpackage\s+[\w.]+;/
-    ]
+      /\bpackage\s+[\w.]+;/,
+    ],
   },
   typescript: {
     patterns: [
       /:\s*(?:string|number|boolean|any)\b/,
       /interface\s+\w+\s*\{/,
       /type\s+\w+\s*=/,
-      /import\s+{\s*[\w\s,]+}\s+from/
-    ]
+      /import\s+{\s*[\w\s,]+}\s+from/,
+    ],
   },
   javascript: {
     patterns: [
@@ -37,99 +51,99 @@ const languagePatterns = {
       /let\s+\w+\s*=/,
       /function\s*\w*\s*\(/,
       /=>\s*{/,
-      /\bmodule\.exports\b/
-    ]
+      /\bmodule\.exports\b/,
+    ],
   },
   python: {
     patterns: [
       /def\s+\w+\s*\(/,
       /import\s+\w+/,
       /from\s+\w+\s+import/,
-      /class\s+\w+(?:\s*\([^)]*\))?\s*:/
-    ]
+      /class\s+\w+(?:\s*\([^)]*\))?\s*:/,
+    ],
   },
   cpp: {
     patterns: [
       /#include\s*[<"]/,
       /\bstd::/,
       /\busing\s+namespace\s+std\b/,
-      /\bint\s+main\s*\(\s*(?:void|int\s+argc|char\s*\*\s*argv)\s*\)/
-    ]
+      /\bint\s+main\s*\(\s*(?:void|int\s+argc|char\s*\*\s*argv)\s*\)/,
+    ],
   },
   csharp: {
     patterns: [
       /using\s+System;/,
       /namespace\s+\w+/,
       /public\s+class\s+\w+/,
-      /\bstring\[\]\s+args/
-    ]
+      /\bstring\[\]\s+args/,
+    ],
   },
   php: {
     patterns: [
       /<\?php/,
       /\$\w+\s*=/,
       /function\s+\w+\s*\(/,
-      /namespace\s+\w+;/
-    ]
+      /namespace\s+\w+;/,
+    ],
   },
   ruby: {
     patterns: [
       /def\s+\w+/,
       /require\s+['"][^'"]+['"]/,
       /class\s+\w+\s*<?\s*\w*/,
-      /\bmodule\s+\w+/
-    ]
+      /\bmodule\s+\w+/,
+    ],
   },
   go: {
     patterns: [
       /package\s+main/,
       /import\s+\(/,
       /func\s+\w+\s*\(/,
-      /type\s+\w+\s+struct/
-    ]
+      /type\s+\w+\s+struct/,
+    ],
   },
   rust: {
-    patterns: [
-      /fn\s+\w+/,
-      /let\s+mut\s+\w+/,
-      /use\s+std::/,
-      /impl\s+\w+/
-    ]
-  }
+    patterns: [/fn\s+\w+/, /let\s+mut\s+\w+/, /use\s+std::/, /impl\s+\w+/],
+  },
 } as const;
 
 type SupportedLanguage = keyof typeof languagePatterns;
 
-const languages: SupportedLanguage[] = Object.keys(languagePatterns) as SupportedLanguage[];
+const languages: SupportedLanguage[] = Object.keys(
+  languagePatterns
+) as SupportedLanguage[];
 
 function App() {
-  const [code, setCode] = useState('')
-  const [language, setLanguage] = useState<SupportedLanguage>('javascript')
-  const [review, setReview] = useState<ReviewResponse | null>(null)
-  const [loading, setLoading] = useState(false)
-  
-  const isMobile = useMediaQuery('(max-width:600px)')
-  const isTablet = useMediaQuery('(max-width:960px)')
+  const [code, setCode] = useState("");
+  const [language, setLanguage] = useState<SupportedLanguage>("javascript");
+  const [review, setReview] = useState<ReviewResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const isMobile = useMediaQuery("(max-width:600px)");
+  const isTablet = useMediaQuery("(max-width:960px)");
 
   const handleEditorDidMount = async () => {
     // Pre-load language detection worker
-    const monaco = await loader.init()
-    await monaco.languages.register({ id: 'detect-lang' })
-  }
+    const monaco = await loader.init();
+    await monaco.languages.register({ id: "detect-lang" });
+  };
 
   const detectLanguage = (code: string) => {
     if (!code.trim()) return;
 
     // Score each language based on how many patterns match
-    const scores = Object.entries(languagePatterns).map(([lang, { patterns }]) => {
-      const score = patterns.reduce((count, pattern) => 
-        count + (pattern.test(code) ? 1 : 0), 0
-      );
-      return { lang, score };
-    });
+    const scores = Object.entries(languagePatterns).map(
+      ([lang, { patterns }]) => {
+        const score = patterns.reduce(
+          (count, pattern) => count + (pattern.test(code) ? 1 : 0),
+          0
+        );
+        return { lang, score };
+      }
+    );
 
     // Find the language with the highest score
-    const bestMatch = scores.reduce((best, current) => 
+    const bestMatch = scores.reduce((best, current) =>
       current.score > best.score ? current : best
     );
 
@@ -140,56 +154,60 @@ function App() {
   };
 
   const handleCodeChange = (value: string | undefined) => {
-    const newCode = value || ''
-    setCode(newCode)
-    detectLanguage(newCode)
-  }
+    const newCode = value || "";
+    setCode(newCode);
+    detectLanguage(newCode);
+  };
 
   const handleReview = async () => {
-    if (!code.trim()) return
-    
-    setLoading(true)
+    if (!code.trim()) return;
+
+    setLoading(true);
     try {
-      const response = await reviewCode(code, language)
-      setReview(response)
+      const response = await reviewCode(code, language);
+      setReview(response);
     } catch (error) {
-      console.error('Error reviewing code:', error)
-      alert('Error reviewing code. Please try again.')
+      console.error("Error reviewing code:", error);
+      alert("Error reviewing code. Please try again.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <Container maxWidth="lg">
-        <Box sx={{ 
-          my: { xs: 2, sm: 3, md: 4 },
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 2
-        }}>
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: { xs: 'column', sm: 'row' }, 
-            alignItems: { xs: 'stretch', sm: 'center' },
-            justifyContent: 'space-between',
+        <Box
+          sx={{
+            my: { xs: 2, sm: 3, md: 4 },
+            display: "flex",
+            flexDirection: "column",
             gap: 2,
-            mb: 2
-          }}>
-            <Typography 
-              variant={isMobile ? "h4" : "h3"} 
-              component="h1" 
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              alignItems: { xs: "stretch", sm: "center" },
+              justifyContent: "space-between",
+              gap: 2,
+              mb: 2,
+            }}
+          >
+            <Typography
+              variant={isMobile ? "h4" : "h3"}
+              component="h1"
               gutterBottom={false}
             >
               AI Code Reviewer
             </Typography>
-            <Typography 
-              variant="subtitle1" 
-              sx={{ 
+            <Typography
+              variant="subtitle1"
+              sx={{
                 opacity: 0.7,
-                textAlign: { xs: 'left', sm: 'right' }
+                textAlign: { xs: "left", sm: "right" },
               }}
             >
               Powered by Deepseek AI
@@ -202,7 +220,9 @@ function App() {
               <Select
                 value={language}
                 label="Language"
-                onChange={(e: SelectChangeEvent) => setLanguage(e.target.value as SupportedLanguage)}
+                onChange={(e: SelectChangeEvent) =>
+                  setLanguage(e.target.value as SupportedLanguage)
+                }
               >
                 {languages.map((lang) => (
                   <MenuItem key={lang} value={lang}>
@@ -224,12 +244,12 @@ function App() {
               options={{
                 minimap: { enabled: !isMobile && !isTablet },
                 fontSize: isMobile ? 12 : 14,
-                wordWrap: 'on'
+                wordWrap: "on",
               }}
             />
           </Paper>
 
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+          <Box sx={{ display: "flex", justifyContent: "center", mb: 4 }}>
             <Button
               variant="contained"
               color="primary"
@@ -238,7 +258,11 @@ function App() {
               size={isMobile ? "medium" : "large"}
               fullWidth={isMobile}
             >
-              {loading ? <CircularProgress size={24} color="inherit" /> : 'Review Code'}
+              {loading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                "Review Code"
+              )}
             </Button>
           </Box>
 
@@ -247,84 +271,102 @@ function App() {
               <Typography variant={isMobile ? "h6" : "h5"} gutterBottom>
                 Code Review Results
               </Typography>
-              
+
               <Box sx={{ mb: 4 }}>
-                <Typography variant="h6" gutterBottom sx={{ mt: 3, color: 'primary.main' }}>
+                <Typography
+                  variant="h6"
+                  gutterBottom
+                  sx={{ mt: 3, color: "primary.main" }}
+                >
                   Review Analysis
                 </Typography>
-                <Box sx={{ 
-                  '& .section': { 
-                    mb: 2,
-                    '&:last-child': {
-                      mb: 0
-                    }
-                  },
-                  '& .section-title': {
-                    fontSize: isMobile ? '1rem' : '1.1rem',
-                    fontWeight: 600,
-                    color: 'primary.main',
-                    mb: 1
-                  },
-                  '& ul': { 
-                    listStyle: 'none',
-                    p: 0,
-                    m: 0
-                  },
-                  '& li': {
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    mb: 0.5,
-                    '&:last-child': {
-                      mb: 0
+                <Box
+                  sx={{
+                    "& .section": {
+                      mb: 2,
+                      "&:last-child": {
+                        mb: 0,
+                      },
                     },
-                    '&:before': {
-                      content: '"•"',
-                      color: 'primary.main',
-                      display: 'inline-block',
-                      width: '1em',
-                      mr: 1
-                    }
-                  },
-                  whiteSpace: 'pre-wrap',
-                  fontSize: isMobile ? '0.875rem' : '1rem',
-                  backgroundColor: 'background.paper',
-                  borderRadius: 1,
-                  p: 2
-                }}>
-                  {Object.entries(review.review).map(([section, points]) => (
-                    points.length > 0 && (
-                      <div key={section} className="section">
-                        <div className="section-title">
-                          {section.replace(/([A-Z])/g, ' $1').trim()}:
+                    "& .section-title": {
+                      fontSize: isMobile ? "1rem" : "1.1rem",
+                      fontWeight: 600,
+                      color: "primary.main",
+                      mb: 1,
+                    },
+                    "& ul": {
+                      listStyle: "none",
+                      p: 0,
+                      m: 0,
+                    },
+                    "& li": {
+                      display: "flex",
+                      alignItems: "flex-start",
+                      mb: 0.5,
+                      "&:last-child": {
+                        mb: 0,
+                      },
+                      "&:before": {
+                        content: '"•"',
+                        color: "primary.main",
+                        display: "inline-block",
+                        width: "1em",
+                        mr: 1,
+                      },
+                    },
+                    whiteSpace: "pre-wrap",
+                    fontSize: isMobile ? "0.875rem" : "1rem",
+                    backgroundColor: "background.paper",
+                    borderRadius: 1,
+                    p: 2,
+                  }}
+                >
+                  {Object.entries(review.review).map(
+                    ([section, points]) =>
+                      points.length > 0 && (
+                        <div key={section} className="section">
+                          <div className="section-title">
+                            {titleCase(
+                              section.replace(/([A-Z])/g, " $1").trim()
+                            )}
+                            :
+                          </div>
+                          <ul>
+                            {points.map((point: string, index: number) => (
+                              <li key={index}>{point}</li>
+                            ))}
+                          </ul>
                         </div>
-                        <ul>
-                          {points.map((point: string, index: number) => (
-                            <li key={index}>{point}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )
-                  ))}
+                      )
+                  )}
                 </Box>
               </Box>
 
               <Box>
-                <Typography variant="h6" gutterBottom sx={{ color: 'primary.main' }}>
+                <Typography
+                  variant="h6"
+                  gutterBottom
+                  sx={{ color: "primary.main" }}
+                >
                   Refactored Code
                 </Typography>
-                <Paper 
-                  variant="outlined" 
-                  sx={{ 
+                <Paper
+                  variant="outlined"
+                  sx={{
                     p: 2,
-                    backgroundColor: 'background.paper',
-                    borderColor: 'primary.main'
+                    backgroundColor: "background.paper",
+                    borderColor: "primary.main",
                   }}
                 >
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                  <Box
+                    sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}
+                  >
                     <Button
                       variant="contained"
                       size={isMobile ? "small" : "medium"}
-                      onClick={() => navigator.clipboard.writeText(review.refactoredCode)}
+                      onClick={() =>
+                        navigator.clipboard.writeText(review.refactoredCode)
+                      }
                       startIcon={<ContentCopyIcon />}
                     >
                       Copy Code
@@ -339,7 +381,7 @@ function App() {
                       readOnly: true,
                       minimap: { enabled: !isMobile && !isTablet },
                       fontSize: isMobile ? 12 : 14,
-                      wordWrap: 'on'
+                      wordWrap: "on",
                     }}
                   />
                 </Paper>
@@ -349,7 +391,7 @@ function App() {
         </Box>
       </Container>
     </ThemeProvider>
-  )
+  );
 }
 
-export default App
+export default App;
