@@ -13,6 +13,7 @@ import {
   InputLabel,
   CircularProgress,
   useMediaQuery,
+  IconButton,
 } from "@mui/material";
 import { createTheme } from "@mui/material/styles";
 import Editor, { loader } from "@monaco-editor/react";
@@ -21,12 +22,8 @@ import type { SelectChangeEvent } from "@mui/material/Select";
 import { reviewCode } from "./api";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { titleCase } from "./utils/utility";
-
-const darkTheme = createTheme({
-  palette: {
-    mode: "dark",
-  },
-});
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
 
 const languagePatterns = {
   java: {
@@ -113,11 +110,25 @@ const languages: SupportedLanguage[] = Object.keys(
   languagePatterns
 ) as SupportedLanguage[];
 
+function Footer() {
+  return (
+    <Box component="footer" sx={{ py: 2, textAlign: "center", mt: 4, opacity: 0.7, borderTop: "1px solid #e0e0e0"  }}>
+      <Typography variant="body2">
+        Copyright © {new Date().getFullYear()} Vishwajeet Kondi. All rights reserved.
+      </Typography>
+    </Box>
+  );
+}
+
 function App() {
   const [code, setCode] = useState("");
   const [language, setLanguage] = useState<SupportedLanguage>("javascript");
   const [review, setReview] = useState<ReviewResponse | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Theme state
+  const [mode, setMode] = useState<'light' | 'dark'>("dark");
+  const theme = createTheme({ palette: { mode } });
 
   const isMobile = useMediaQuery("(max-width:600px)");
   const isTablet = useMediaQuery("(max-width:960px)");
@@ -175,12 +186,14 @@ function App() {
   };
 
   return (
-    <ThemeProvider theme={darkTheme}>
+    <ThemeProvider theme={theme}>
       <CssBaseline />
       <Container maxWidth="lg">
         <Box
           sx={{
-            my: { xs: 2, sm: 3, md: 4 },
+            mt: 0,
+            mb: { xs: 2, sm: 3, md: 4 },
+            pt: 5,
             display: "flex",
             flexDirection: "column",
             gap: 2,
@@ -389,6 +402,24 @@ function App() {
             </Paper>
           )}
         </Box>
+        <Footer />
+        {/* Floating theme toggle icon button (to be implemented) */}
+        <IconButton
+          sx={{
+            position: "fixed",
+            bottom: 24,
+            right: 24,
+            zIndex: 1300,
+            boxShadow: 3,
+            bgcolor: "background.paper",
+            border: 1,
+            borderColor: "divider",
+          }}
+          onClick={() => setMode(mode === 'light' ? 'dark' : 'light')}
+          color="inherit"
+        >
+          {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+        </IconButton>
       </Container>
     </ThemeProvider>
   );

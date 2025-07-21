@@ -4,10 +4,11 @@ An AI-powered code review application that uses Deepseek AI to analyze and sugge
 
 ## Features
 
-- Support for multiple programming languages
+- Support for multiple programming languages (auto-detection and manual selection)
 - Real-time code editing with Monaco Editor
 - AI-powered code review and refactoring suggestions
-- Modern, dark-themed UI
+- Modern UI with dark and light themes (toggleable)
+- Automatic language detection as you type or paste code
 - Copy-to-clipboard functionality for refactored code
 
 ## Prerequisites
@@ -27,6 +28,7 @@ An AI-powered code review application that uses Deepseek AI to analyze and sugge
    ```
    VITE_DEEPSEEK_API_KEY=your_api_key_here
    ```
+   _Note: The API key is loaded from the environment for secure access to Deepseek AI._
 
 ## Development
 
@@ -40,12 +42,13 @@ The application will be available at `http://localhost:5173`
 
 ## Usage
 
-1. Select the programming language from the dropdown menu
-2. Paste your code into the editor
+1. Paste your code into the editor (the app will try to auto-detect the language)
+2. Optionally, select the programming language from the dropdown menu
 3. Click the "Review Code" button
 4. Wait for the AI to analyze your code
 5. Review the suggestions and refactored code
 6. Use the "Copy Code" button to copy the refactored code to your clipboard
+7. Use the floating theme toggle button in the bottom-right corner to switch between light and dark modes
 
 ## Technologies Used
 
